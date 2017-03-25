@@ -24,25 +24,26 @@ func newExampleClient(client pb.ExampleServiceClient) *exampleClient {
 	}
 }
 
-func isEOFOrCanceled(err error) bool {
-	return err == io.EOF || grpc.Code(err) == codes.Canceled
-}
-
 func (c *exampleClient) runJob(ctx context.Context) error {
 	stream, err := c.client.RunJob(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer stream.CloseSend()
 
+	err = stream.CloseSend()
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	for {
 		result, err := stream.Recv()
-		if isEOFOrCanceled(err) {
-			log.Printf("got EOF or canceled")
-			return nil
+		if err == io.EOF {
+			log.Printf("got EOF")
+			break
+		} else if grpc.Code(err) == codes.Canceled {
+			log.Printf("canceled")
+			break
 		} else if err != nil {
-			log.Printf("failed to Recv err=%+v", errors.WithStack(err))
-			return nil
+			return errors.WithStack(err)
 		}
 
 		log.Printf("result=%+v", result)
@@ -78,6 +79,6 @@ func main() {
 	}()
 	err = client.runJob(ctx)
 	if err != nil {
-		log.Fatalf("failed to runJob; err=%+v", err)
+		log.Printf("failed to runJob err (%T)=%+v", errors.Cause(err), err)
 	}
 }
