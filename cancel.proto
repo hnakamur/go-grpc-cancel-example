@@ -1,0 +1,23 @@
+// NOTE: Run the following command when you modify this file.
+// /usr/local/protobuf3/bin/protoc --go_out=plugins=grpc:. *.proto
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.naruh.grpc.examples.cancel";
+option java_outer_classname = "ExampleProto";
+
+package example;
+
+service ExampleService {
+    rpc RunJob(stream JobControl) returns (stream JobResult) {}
+}
+
+message JobControl {
+    string type = 1;
+    string data = 2;
+}
+
+message JobResult {
+    string type = 1;
+    string data = 2;
+}
