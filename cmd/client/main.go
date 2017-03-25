@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 
 	pb "github.com/hnakamur/go-grpc-cancel-example"
 	"github.com/pkg/errors"
@@ -34,17 +33,15 @@ func (c *exampleClient) runJob(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	defer stream.CloseSend()
 
 	ctx, cancel := context.WithCancel(ctx)
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer cancel()
 		for {
 			result, err := stream.Recv()
 			if isEOFOrCanceled(err) {
 				log.Printf("got EOF or canceled")
-				cancel()
 				return
 			} else if err != nil {
 				log.Printf("failed to Recv err=%+v", errors.WithStack(err))
@@ -54,11 +51,8 @@ func (c *exampleClient) runJob(ctx context.Context) error {
 			log.Printf("result=%+v", result)
 		}
 	}()
-
 	<-ctx.Done()
 	log.Printf("received from ctx.Done")
-	wg.Wait()
-	log.Printf("done wait")
 	return nil
 }
 
