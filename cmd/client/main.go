@@ -35,24 +35,18 @@ func (c *exampleClient) runJob(ctx context.Context) error {
 	}
 	defer stream.CloseSend()
 
-	ctx, cancel := context.WithCancel(ctx)
-	go func() {
-		defer cancel()
-		for {
-			result, err := stream.Recv()
-			if isEOFOrCanceled(err) {
-				log.Printf("got EOF or canceled")
-				return
-			} else if err != nil {
-				log.Printf("failed to Recv err=%+v", errors.WithStack(err))
-				return
-			}
-
-			log.Printf("result=%+v", result)
+	for {
+		result, err := stream.Recv()
+		if isEOFOrCanceled(err) {
+			log.Printf("got EOF or canceled")
+			return nil
+		} else if err != nil {
+			log.Printf("failed to Recv err=%+v", errors.WithStack(err))
+			return nil
 		}
-	}()
-	<-ctx.Done()
-	log.Printf("received from ctx.Done")
+
+		log.Printf("result=%+v", result)
+	}
 	return nil
 }
 
